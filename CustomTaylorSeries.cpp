@@ -69,6 +69,48 @@ bool function_checker(std::string& func){
     return 1;
 }
 
+long double derivatives(const std::function<long double(long double)>& toBeDoneOn, long double a, int i){
+    if(i == 0) return toBeDoneOn(a);
+    long double grain = 50000, dx = 1/grain;
+    long double b = derivatives(toBeDoneOn, a, i - 1);
+    long double c = derivatives(toBeDoneOn, a - dx, i - 1);
+    return (b-c)*grain;
+}
+
+std::vector<long double> factor(const int& degree, const std::function<long double(long double)>& toBeDoneOn, const long double& a){
+    std::vector<long double> fact(degree + 1);
+    for(int i = 0; i < fact.size(); i++){
+        fact[i] = derivatives(toBeDoneOn, a, i);
+    }
+    for(int i = 2; i < fact.size(); i++){
+        std::transform(fact.begin() + i, fact.end(), fact.begin() + i, [&](long double& c){return c/i;});
+    }
+    return fact;
+}
+
+long double nCr(int a, int b){
+    if(b == 0 || a == b) return 1;
+    if(b == 1 || a - b == 1) return a;
+    if(b > a/2) b = a - b;
+    long double result = 1.0;
+    for(int i = 1; i <= b; i++){
+        result*=(a - i + 1)/i;
+    }
+    return result;
+}
+
+std::vector<long double> coeffs(std::function<long double(long double)>& toBeDoneOn, std::vector<long double>& fact, long double& a){
+    std::vector<long double> coefficients(fact.size());
+    for(int i = 0; i < coefficients.size(); i++){
+        long double b = 1;
+        for(int j = 0; j <= i; j++){
+            coefficients[j] += nCr(i, j)*b*fact[i];
+            b*=a;
+        }
+    }
+    return coefficients;
+}
+
 int main(){
     std::map<std::string, std::function<long double(long double)>> functions{
         {"exp", static_cast<long double(*)(long double)>(std::exp)},
@@ -80,12 +122,14 @@ int main(){
         {"sin", static_cast<long double(*)(long double)>(std::sin)},
         {"sqrt", static_cast<long double(*)(long double)>(std::sqrt)}
     };
+    std::cout << "In the program you have to enter the coefficients from the highest coefficient\nfor eg, 2 0 0 would be 2x^2 and 1 0 would be x\n";
     while(true){
         std::string input, func;
-        std::cout << "Enter the coefficients of your polynomial:\nYou have to enter it from the highest coefficient\nfor eg, 1 0 0 would be x^2 and 1 would be 1\n";
+        std::cout << "Enter the coefficients of your polynomial:\n";
         std::getline(std::cin, input);
         input_corrector(input);
         if(invalid_input(input)){
+            std::cin.clear();
             std::cout << "Invalid numbers.\n";
             continue;
         }
@@ -98,10 +142,12 @@ int main(){
         std::getline(std::cin, func);
         input_corrector(func);
         while(function_checker(func)){
+            std::cin.clear();
             std::cout << "Invalid function.\nEnter again:\n";
             std::getline(std::cin, func);
             input_corrector(func);
         }
+        std::cin.clear();
         std::function<long double(long double)> toBeDoneOn;
         toBeDoneOn = functions[func];
         toBeDoneOn = [f = toBeDoneOn, g = poly](long double x){return f(g(x));};
@@ -117,6 +163,12 @@ int main(){
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         }
-        
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::vector<long double> fact = factor(degree, toBeDoneOn, a);
+        std::vector<long double> coefficients = coeffs(toBeDoneOn, fact, a);
+        for(int i = 0; i < coefficients.size(); i++){
+            std::cout << coefficients[i] << " ";
+        }
     }
 }
