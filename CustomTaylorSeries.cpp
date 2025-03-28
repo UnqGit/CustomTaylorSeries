@@ -71,10 +71,10 @@ bool function_checker(std::string& func){
 
 long double derivatives(const std::function<long double(long double)>& toBeDoneOn, long double a, int i){
     if(i == 0) return toBeDoneOn(a);
-    long double grain = 10000, dx = 1/grain;
+    long double h = (i < 4)?1.0/(1<<10):(i < 7)?1.0/(1<<8):1.0/(1 << 5);
     long double b = derivatives(toBeDoneOn, a, i - 1);
-    long double c = derivatives(toBeDoneOn, a - dx, i - 1);
-    return (b-c)*grain;
+    long double c = derivatives(toBeDoneOn, a - h, i - 1);
+    return (b-c)/h;
 }
 
 std::vector<long double> factor(const int& degree, const std::function<long double(long double)>& toBeDoneOn, const long double& a){
@@ -170,6 +170,6 @@ int main(){
         for(int i = 0; i < coefficients.size(); i++){
             std::cout << coefficients[i] << " ";
         }
-        std::cout << '\n';
+        std::cout << "\n";
     }
 }
