@@ -105,7 +105,7 @@ std::vector<long double> coeffs(std::function<long double(long double)>& toBeDon
         long double b = 1.0;
         for(int j = i; j >= 0; j--){
             coefficients[j] += nCr(i, j)*b*fact[i];
-            b*=a;
+            b*=-a;
         }
     }
     return coefficients;
