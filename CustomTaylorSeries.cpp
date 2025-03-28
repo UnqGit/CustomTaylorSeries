@@ -8,16 +8,11 @@
 #include <functional>
 #include <cmath>
 
-std::vector<long double> polycoef;
-
-long double poly(long double x){
-    long double y = 0;
-    for(int i = 0; i < polycoef.size(); i++) y = y*x + polycoef[i];
-    return y;
-}
-
 void input_corrector(std::string& input){
     std::replace(input.begin(), input.end(), ',', ' ');
+    input.erase(0, input.find_first_not_of(" 0\n\t"));
+    input.erase(input.find_last_not_of(" \n\t")+1);
+    if(input.empty()) input = "0";
     for(char& ch : input) ch = std::tolower(ch);
 }
 
@@ -111,6 +106,53 @@ std::vector<long double> coeffs(std::function<long double(long double)>& toBeDon
     return coefficients;
 }
 
+std::string superscript(int i){
+    if(i==1) return "";
+    std::string result;
+    std::string super[] = {"⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"};
+    while(i>0){
+        result=super[i%10]+result;
+        i/=10;
+    }
+    return result;
+}
+
+void print(std::vector<long double>& arr){
+    std::string result;
+    if(arr[0]==0){}
+    else{
+        result = std::to_string(arr[0]);
+        if(arr[0]!=std::floor(arr[0]))std::cout.precision(7);
+        else std::cout.precision(0);
+        std::cout << std::fixed << arr[0];
+    }
+    for(int i = 1; i < arr.size(); i++){
+        if(arr[i]==0) continue;
+        else{
+            std::cout << (result.empty()?(arr[i]>0?"":"-"):(arr[i]>0?" + ":" - "));
+            if(std::abs(arr[i])!=1){
+                if(arr[i]!=std::floor(arr[i]))std::cout.precision(7);
+                else std::cout.precision(0);
+                std::cout << std::fixed << std::abs(arr[i]);
+            }
+            std::cout << "x" << superscript(i);
+            result = std::to_string(arr[i]);
+        }
+    }
+    if(result.empty()) std::cout << 0;
+}
+
+void hornerPrint(std::vector<long double>& arr){
+    while(!arr.empty()&&arr.back()==0) arr.pop_back();
+    if(arr.empty()) arr={0};
+    if(arr[0]!=0)std::cout << arr[0] << " + ";
+    else if(arr.size()==1) std::cout << arr[0];
+    for(int i = 1; i < arr.size(); i++){
+        std::cout << "x*( " << arr[i] << (i!=arr.size()-1?" + ":"");
+    }
+    std::cout << std::string(arr.size()-1, ')');
+}
+
 int main(){
     std::map<std::string, std::function<long double(long double)>> functions{
         {"exp", static_cast<long double(*)(long double)>(std::exp)},
@@ -120,9 +162,11 @@ int main(){
         {"acos", static_cast<long double(*)(long double)>(std::acos)},
         {"tan", static_cast<long double(*)(long double)>(std::tan)},
         {"sin", static_cast<long double(*)(long double)>(std::sin)},
+        {"cos", static_cast<long double(*)(long double)>(std::cos)},
         {"sqrt", static_cast<long double(*)(long double)>(std::sqrt)}
     };
-    std::cout << "In the program you have to enter the coefficients from the highest coefficient\nfor eg, 2 0 0 would be 2x^2 and 1 0 would be x\n";
+    std::cout << "In the program you have to enter\nthe coefficients from the highest coefficient\nfor eg, 2 0 0 would be 2x^2 and 1 0 would be x\n";
+    std::cout << "The available functions will be\nsqrt, exp, log, tan, sin, cos, atan, acos, asin\n\n";
     while(true){
         std::string input, func;
         std::cout << "Enter the coefficients of your polynomial:\n";
@@ -133,12 +177,12 @@ int main(){
             std::cout << "Invalid numbers.\n";
             continue;
         }
-        polycoef.clear();
+        std::vector<long double> polycoef;
         std::stringstream ss(input);
         long double coef, a;
         int degree;
         while(ss >> coef) polycoef.push_back(coef);
-        std::cout << "Enter the function that you want the taylor expansion of\nfor eg,\n:exp\n:log\n:sqrt\netc.\n";
+        std::cout << "Enter the function that you want taylor expansion of\n";
         std::getline(std::cin, func);
         input_corrector(func);
         while(function_checker(func)){
@@ -150,10 +194,17 @@ int main(){
         std::cin.clear();
         std::function<long double(long double)> toBeDoneOn;
         toBeDoneOn = functions[func];
+        auto poly = [&](long double x){
+            long double y = 0;
+            for(int i = 0; i < polycoef.size(); i++) y = y*x + polycoef[i];
+            return y;
+        };
         toBeDoneOn = [f = toBeDoneOn, g = poly](long double x){return f(g(x));};
         std::cout << "Enter the point you want the taylor series around:\n";
-        while(!(std::cin >> a)){
-            std::cout << "Invalid number please enter again:\n";
+        while(!(std::cin >> a) || ((func=="sqrt")&&(poly(a)<0)) || ((func=="log")&&(poly(a)<=0)) || ((func=="acos"||func=="asin")&&(std::abs(poly(a))>1))){
+            if(std::cin.fail()) std::cout << "Invalid number";
+            else std::cout << "Number is out of domain of function";
+            std::cout << " please enter again:\n";
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         }
@@ -167,9 +218,14 @@ int main(){
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::vector<long double> fact = factor(degree, toBeDoneOn, a);
         std::vector<long double> coefficients = coeffs(toBeDoneOn, fact, a);
-        for(int i = 0; i < coefficients.size(); i++){
-            std::cout << coefficients[i] << " ";
-        }
-        std::cout << "\n";
+        for(int i = 0; i < polycoef.size()/2; i++)
+            std::swap(polycoef[i], polycoef[polycoef.size()-i-1]);
+        std::cout << "y = \033[92m" << func << "(";
+        print(polycoef);
+        std::cout << ")\033[0m ≈ f(x) = \033[93m";
+        print(coefficients);
+        std::cout << "\033[0m\nHorner's method: \033[93m";
+        hornerPrint(coefficients);
+        std::cout << "\033[0m\n————————————————————————————————————————————————\n\n";
     }
 }
