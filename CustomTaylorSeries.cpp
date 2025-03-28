@@ -71,7 +71,7 @@ bool function_checker(std::string& func){
 
 long double derivatives(const std::function<long double(long double)>& toBeDoneOn, long double a, int i){
     if(i == 0) return toBeDoneOn(a);
-    long double grain = 50000, dx = 1/grain;
+    long double grain = 10000, dx = 1/grain;
     long double b = derivatives(toBeDoneOn, a, i - 1);
     long double c = derivatives(toBeDoneOn, a - dx, i - 1);
     return (b-c)*grain;
@@ -102,8 +102,8 @@ long double nCr(int a, int b){
 std::vector<long double> coeffs(std::function<long double(long double)>& toBeDoneOn, std::vector<long double>& fact, long double& a){
     std::vector<long double> coefficients(fact.size());
     for(int i = 0; i < coefficients.size(); i++){
-        long double b = 1;
-        for(int j = 0; j <= i; j++){
+        long double b = 1.0;
+        for(int j = i; j >= 0; j--){
             coefficients[j] += nCr(i, j)*b*fact[i];
             b*=a;
         }
@@ -170,5 +170,6 @@ int main(){
         for(int i = 0; i < coefficients.size(); i++){
             std::cout << coefficients[i] << " ";
         }
+        std::cout << '\n';
     }
 }
