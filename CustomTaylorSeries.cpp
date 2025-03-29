@@ -69,7 +69,7 @@ bool function_checker(std::string& func){
 
 long double derivatives(const std::function<long double(long double)>& toBeDoneOn, long double a, int i){
     if(i == 0) return toBeDoneOn(a);
-    long double h = (i < 4)?1.0/(1<<10):(i < 7)?1.0/(1<<8):1.0/(1<<5);
+    long double h = (i<=4)?1.0/(1<<10):1.0/(1<<8);
     auto f = [&](long double d){
         return (derivatives(toBeDoneOn, a+h*d, i-1)-derivatives(toBeDoneOn, a-h*d, i-1))/(2*h*d);
     };
