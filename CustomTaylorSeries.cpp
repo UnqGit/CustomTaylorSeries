@@ -50,29 +50,30 @@ bool invalid_input(std::string input){
     }
     return 0;
 }
-bool condition(const std::string& part,const std::string& str){
+bool cond(const std::string& part,const std::string& str){
     return str.find(part)!=std::string::npos;
 }
 bool function_checker(std::string& func){
-    if(condition("ex", func)){func = "exp"; return 0;}
-    if(condition("lo", func)){func = "log"; return 0;}
-    if(condition("at", func)){func = "atan"; return 0;}
-    if(condition("as", func)){func = "asin"; return 0;}
-    if(condition("ac", func)){func = "acos"; return 0;}
-    if(condition("sq", func)){func = "sqrt"; return 0;}
-    if(condition("ta", func)){func = "tan"; return 0;}
-    if(condition("si", func)){func = "sin"; return 0;}
-    if(condition("co", func)){func = "cos"; return 0;}
-    if(condition("po", func)){func = "pow"; return 0;}
+    if(cond("ex", func)){func = "exp"; return 0;}
+    if(cond("lo", func)){func = "log"; return 0;}
+    if(cond("at", func)){func = "atan"; return 0;}
+    if(cond("as", func)){func = "asin"; return 0;}
+    if(cond("ac", func)){func = "acos"; return 0;}
+    if(cond("sq", func)){func = "sqrt"; return 0;}
+    if(cond("ta", func)){func = "tan"; return 0;}
+    if(cond("si", func)){func = "sin"; return 0;}
+    if(cond("co", func)){func = "cos"; return 0;}
+    if(cond("po", func)){func = "pow"; return 0;}
     return 1;
 }
 
 long double derivatives(const std::function<long double(long double)>& toBeDoneOn, long double a, int i){
     if(i == 0) return toBeDoneOn(a);
-    long double h = (i < 4)?1.0/(1<<10):(i < 7)?1.0/(1<<8):1.0/(1 << 5);
-    long double b = derivatives(toBeDoneOn, a, i - 1);
-    long double c = derivatives(toBeDoneOn, a - h, i - 1);
-    return (b-c)/h;
+    long double h = (i < 4)?1.0/(1<<10):(i < 7)?1.0/(1<<8):1.0/(1<<5);
+    auto f = [&](long double d){
+        return (derivatives(toBeDoneOn, a+h*d, i-1)-derivatives(toBeDoneOn, a-h*d, i-1))/(2*h*d);
+    };
+    return (4*f(0.5)-f(1))/3;
 }
 
 std::vector<long double> factor(const int& degree, const std::function<long double(long double)>& toBeDoneOn, const long double& a){
@@ -89,10 +90,10 @@ std::vector<long double> factor(const int& degree, const std::function<long doub
 long double nCr(int a, int b){
     if(b == 0 || a == b) return 1;
     if(b == 1 || a - b == 1) return a;
-    if(b > a/2) b = a - b;
+    if(b>a/2) b = a - b;
     long double result = 1.0;
     for(int i = 1; i <= b; i++){
-        result*=(a - i + 1)/i;
+        result*=(1.0 + a - i)/(0.0 + i);
     }
     return result;
 }
@@ -120,39 +121,41 @@ std::string superscript(int i){
     return result;
 }
 
-void print(std::vector<long double>& arr){
+void print(std::vector<long double>& arr, std::string func=""){
     std::string result;
     if(arr[0]==0){}
     else{
         result = std::to_string(arr[0]);
-        if(arr[0]!=std::floor(arr[0]))std::cout.precision(7);
-        else std::cout.precision(0);
-        std::cout << std::fixed << arr[0];
+        std::cout << arr[0];
     }
     for(int i = 1; i < arr.size(); i++){
         if(arr[i]==0) continue;
         else{
             std::cout << (result.empty()?(arr[i]>0?"":"-"):(arr[i]>0?" + ":" - "));
-            if(std::abs(arr[i])!=1){
-                if(arr[i]!=std::floor(arr[i]))std::cout.precision(7);
-                else std::cout.precision(0);
-                std::cout << std::fixed << std::abs(arr[i]);
+            if(std::abs(std::abs(arr[i])-1)>1e-6){
+                std::cout << std::abs(arr[i]);
             }
             std::cout << "x" << superscript(i);
             result = std::to_string(arr[i]);
         }
     }
-    if(result.empty()) std::cout << 0;
+    if(result.empty()){
+        if(func=="log") std::cout << "e";
+        else std::cout << 0;
+    }
 }
 
 void hornerPrint(std::vector<long double>& arr){
     while(!arr.empty()&&arr.back()==0) arr.pop_back();
     if(arr.empty()) arr={0};
+    bool f = false;
     if(arr[0]!=0)std::cout << arr[0] << ((arr.size()==1)?"":" + ");
+    else if(arr.size()==1)std::cout << 0;
     for(int i = 1; i < arr.size(); i++){
-        std::cout << "x*( " << arr[i] << (i!=arr.size()-1?" + ":"");
+        if(i==arr.size()-1&&arr[i]==1){std::cout << "x"; f = true;}
+        else std::cout << "x*( " << arr[i] << (i!=arr.size()-1?" + ":"");
     }
-    std::cout << std::string(arr.size()-1, ')');
+    std::cout << (f?std::string(arr.size()-2, ')'):std::string(arr.size()-1, ')'));
 }
 
 std::string getInput(const std::string& prompt,const bool& funcornums){
@@ -181,12 +184,16 @@ int main(){
         std::vector<long double> polycoef, polycoef2;
         func = getInput("Enter the function that you want taylor expansion of\n", true);
         prompt = "Enter the coefficients of";
-        prompt+=(func=="pow"?" base":"");
+        prompt+=(func=="pow"?" base":func=="log"?" function":"");
         prompt+=" polynomial:\n";
         input = getInput(prompt, false);
         std::stringstream ss(input);      
         while(ss >> coef) polycoef.push_back(coef);
-        if(func=="pow"){input = getInput("Enter the coefficients of exponent polynomial:\n", false);
+        if(func=="pow"||func=="log"){
+            prompt = "Enter the coefficients of ";
+            prompt+=(func=="pow"?"exponent":"base(leave empty or enter 0 to get natural log)");
+            prompt+=" polynomial:\n";
+            input = getInput(prompt, false);
             std::stringstream sd(input);
             while(sd >> coef2) polycoef2.push_back(coef2);}
         std::function<long double(long double)> toBeDoneOn;
@@ -202,7 +209,7 @@ int main(){
         };
         if(func=="sqrt") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::sqrt), g = poly](long double x){return f(g(x));};
         else if(func=="exp") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::exp), g = poly](long double x){return f(g(x));};
-        else if(func=="log") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::log), g = poly](long double x){return f(g(x));};
+        else if(func=="log") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::log), g = poly, h = poly2, o = polycoef2](long double x){return (o.size()==1&&o[0]==0)?f(g(x)):f(g(x))/f(h(x));};
         else if(func=="sin") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::sin), g = poly](long double x){return f(g(x));};
         else if(func=="cos") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::cos), g = poly](long double x){return f(g(x));};
         else if(func=="tan") toBeDoneOn = [f = static_cast<long double(*)(long double)>(std::tan), g = poly](long double x){return f(g(x));};
@@ -234,7 +241,7 @@ int main(){
             std::swap(polycoef2[i], polycoef2[polycoef2.size()-i-1]);
         std::cout << "y = \033[92m" << func << "(";
         print(polycoef);
-        if(func=="pow"){std::cout << ", "; print(polycoef2);}
+        if(func=="pow"||func=="log"){std::cout << ", "; print(polycoef2, func);}
         std::cout << ")\033[0m ≈ f(x) = \033[93m";
         print(coefficients);
         std::cout << "\033[0m\nHorner's method: \033[93m";
