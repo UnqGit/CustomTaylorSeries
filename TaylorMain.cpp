@@ -7,7 +7,7 @@ int main(){
     start_text();
     while(true){
         std::string func, exit;
-        long double coef, a, coef2;
+        long double a;
         int degree;
         func = getInput("Enter the function that you want taylor expansion of\n", true);
         std::function<long double(long double)> toBeDoneOn;
