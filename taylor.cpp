@@ -26,89 +26,46 @@ void start_text(){
 }
 
 void input_corrector(std::string& input){
-    input = std::regex_replace(input, std::regex(","), " ");
-    input.erase(0, input.find_first_not_of(" 0\n\t"));
-    input.erase(input.find_last_not_of(" \n\t")+1);
-    input = std::regex_replace(input, std::regex("\t"), " ");
-    input = std::regex_replace(input, std::regex("\n"), " ");
-    if(input.empty()) input = "0";
+    input = std::regex_replace(input, std::regex("[,\t\n]+"), " ");
+    input.erase(0, input.find_first_not_of(" 0"));
+    if(input.empty()||input==" ") input = "0";
+    else if(input.back()==' ')input.pop_back();
     for(char& ch : input) ch = std::tolower(ch);
 }
 
 bool invalid_input(std::string& input){
-    if(input.find('#')!=std::string::npos) return 1;
+    if(std::regex_search(input, std::regex("[^-x+ 0123456789\\.\\^⁰¹²³⁴⁵⁶⁷⁸⁹]"))) return true;
     std::string super[] = {"⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"};
     for(int i = 0; i <= 9; i++){
         input = std::regex_replace(input, std::regex(super[i]), std::to_string(i));
-        std::string temp = "x";
-        temp+=std::to_string(i);
-        std::string todo="x^"+std::to_string(i);
+        std::string temp = "x"+std::to_string(i);
+        std::string todo = "x^"+std::to_string(i);
         input = std::regex_replace(input, std::regex(temp), todo);
     }
-    if(input.find("x^-")!=std::string::npos) return true;
-    input = std::regex_replace(input, std::regex("x\\^\\+"), "x^");
-    input = std::regex_replace(input, std::regex("x\\^"), "#");
+    if(std::regex_search(input, std::regex("x\\^[- ]"))) return true;
+    input = std::regex_replace(input, std::regex("x\\^\\+?"), "#");
+    if(input.find('^')!=std::string::npos) return true;
     input = std::regex_replace(input, std::regex("x"), "#1");
-    input = std::regex_replace(input, std::regex("\\-"), " -");
-    input = std::regex_replace(input, std::regex("\\+"), " +");
+    input = std::regex_replace(input, std::regex("([+-])"), " $1");
     input = std::regex_replace(input, std::regex(" #"), " 1#");
     input = std::regex_replace(input, std::regex("\\-#"), "-1#");
     input = std::regex_replace(input, std::regex("\\+#"), "+1#");
-    while(input.find("  ")!=std::string::npos){
-        input = std::regex_replace(input, std::regex("  "), " ");
-    }
-    input = std::regex_replace(input, std::regex("# "), "#");
-    input = std::regex_replace(input, std::regex("\\- "), "-");
-    input = std::regex_replace(input, std::regex("\\+ "), "+");
-    if(input.find("#-")!=std::string::npos)return true;
+    input = std::regex_replace(input, std::regex("\\s+"), " ");
+    input = std::regex_replace(input, std::regex("([+-]|#)\\s"), "$1");
     if(input[0]=='#') input.insert(input.begin(), '1');
     for(int i = 0; i < input.size(); i++){
-        char j = input[i];
-        if(!(std::isdigit(j))){
-            if(j=='-'||j=='+'){
-                if(i > 0){
-                    if(std::isdigit(input[i-1])){
-                        input.insert(input.begin()+i, ' ');
-                        i++;
-                    }
-                }
-                if(i + 1 < input.length()){
-                    if(std::isdigit(input[i + 1])) continue;
-                    else if(input[i + 1] == '.'){
-                        if(i + 2 < input.size()){
-                            if(std::isdigit(input[i + 2])) continue;
-                            return true;
-                        }
-                    }
-                }
-                else return true;
-            }
-            else if(j=='.'){
-                if(i > 0){
-                    char k = input[i-1];
-                    if(!(std::isdigit(k) || k == '-' || k == '+' || k == ' ')) return true;
-                }
-                if(i + 1 < input.size()){
-                    char k = input[i + 1];
-                    if(!(std::isdigit(k))) return true;
-                }
-                continue;
-            }
-            else if(j=='#' || j==' ') continue;
-            return true;
-        }
-        else{
-            if(i > 0){
-                if(input[i - 1]=='#'){
-                    while(i+1<input.length()){
-                        if(input[i+1]==' ')break;
-                        if(!std::isdigit(input[i+1])) return true;
-                        i++;
-                    }
-                }
+        if(input[i]=='#'||input[i]=='.'){
+          if(i+1==input.length()) return true;
+          else if(!(std::isdigit(input[i+1]))) return true;
+            while(i+1<input.length()){
+                if(input[i+1]==' ')break;
+                if(!std::isdigit(input[i+1])) return true;
+                i++;
             }
         }
-    }
+     }
+    if(std::regex_search(input, std::regex("[+-][^0-9#\\.]"))) return true;
+    if(input.back()=='-'||input.back()=='+') return true;
     return false;
 }
 
